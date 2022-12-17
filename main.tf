@@ -11,6 +11,10 @@ data "aws_subnet_ids" "default" {
   vpc_id = data.aws_vpc.default.id
 }
 
+data "http" "myip" {
+  url = "http://ipv4.icanhazip.com"
+}
+
 
 # Configure Security Group
 resource "aws_security_group" "Jenkins-SG" {
@@ -22,27 +26,10 @@ resource "aws_security_group" "Jenkins-SG" {
       from_port   = port.value
       to_port     = port.value
       protocol    = "TCP"
-      cidr_blocks = ["172.31.0.0/16", "103.212.159.49/32"]    # my wifi ip and vpc cidr, check by "curl wgetip.com" 
+      cidr_blocks = ["172.31.0.0/16", "${chomp(data.http.myip.body)}/32"]    # my wifi ip and vpc cidr, check by "curl wgetip.com" 
     }
   }
-  # ingress {
-  #   from_port   = 8080
-  #   to_port     = 8080
-  #   protocol    = "tcp"
-  #   cidr_blocks = ["0.0.0.0/0"]
-  # }
-  # ingress {
-  #   from_port   = 22
-  #   to_port     = 22
-  #   protocol    = "tcp"
-  #   cidr_blocks = ["0.0.0.0/0"]
-  # }
-  # ingress {
-  #   from_port   = 2049
-  #   to_port     = 2049
-  #   protocol    = "tcp"
-  #   cidr_blocks = ["0.0.0.0/0"]
-  # }
+  
   egress {
     from_port   = 0
     to_port     = 0
@@ -50,7 +37,7 @@ resource "aws_security_group" "Jenkins-SG" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
-# Add security group for EFS
+# Add security group for EFS (Elastic File System)
 resource "aws_security_group" "ingress-efs" {
   name   = "ingress-efs"
   vpc_id = data.aws_vpc.default.id
@@ -93,7 +80,7 @@ resource "aws_security_group" "albSG" {
   }
 }
 
-// EFS
+// EFS  (Elastic File System)
 resource "aws_efs_file_system" "JenkinsEFS" {
   creation_token   = "Jenkins-EFS"
   performance_mode = "generalPurpose"

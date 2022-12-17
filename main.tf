@@ -11,10 +11,6 @@ data "aws_subnet_ids" "default" {
   vpc_id = data.aws_vpc.default.id
 }
 
-# data "http" "myip" {
-#   url = "http://ipv4.icanhazip.com"
-# }
-
 
 # Configure Security Group
 resource "aws_security_group" "Jenkins-SG" {
@@ -26,7 +22,7 @@ resource "aws_security_group" "Jenkins-SG" {
       from_port   = port.value
       to_port     = port.value
       protocol    = "TCP"
-      cidr_blocks = ["0.0.0.0/0"]    # my wifi ip and vpc cidr, check by "curl wgetip.com" 
+      cidr_blocks = ["0.0.0.0/0"]
     }
   }
   
@@ -37,7 +33,7 @@ resource "aws_security_group" "Jenkins-SG" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
-# Add security group for EFS (Elastic File System)
+# Add security group for EFS
 resource "aws_security_group" "ingress-efs" {
   name   = "ingress-efs"
   vpc_id = data.aws_vpc.default.id
@@ -47,7 +43,7 @@ resource "aws_security_group" "ingress-efs" {
     from_port   = 2049
     to_port     = 2049
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]     # vpc cidr to make network storage available to vpc only 
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -80,7 +76,7 @@ resource "aws_security_group" "albSG" {
   }
 }
 
-// EFS  (Elastic File System)
+// EFS
 resource "aws_efs_file_system" "JenkinsEFS" {
   creation_token   = "Jenkins-EFS"
   performance_mode = "generalPurpose"
@@ -124,7 +120,6 @@ resource "aws_launch_configuration" "jenkinslc" {
   instance_type   = var.instance_type
   key_name        = var.ssh_key_name
   security_groups = [aws_security_group.Jenkins-SG.id]
-  ####  we are installing jenkins and mounting efs that we created 97 line number by userdata 
   user_data       = <<-EOF
               #!/bin/bash
               sudo apt-get -y update
@@ -142,7 +137,7 @@ resource "aws_launch_configuration" "jenkinslc" {
               sudo wget -q -O - https://pkg.jenkins.io/debian-stable/jenkins.io.key | sudo apt-key add -
               echo "deb https://pkg.jenkins.io/debian-stable binary/" | sudo tee -a /etc/apt/sources.list
               sudo apt-get -y update
-              sudo apt-get -y install jenkins awscli
+              sudo apt-get -y install jenkins
               EOF
 }
 
@@ -183,15 +178,12 @@ resource "aws_lb_target_group" "asg" {
   port     = var.jenkins_port
   protocol = "HTTP"
   vpc_id   = data.aws_vpc.default.id
-  stickiness {
-    enabled = true # stickiness not supported in NLB
-    type    = "lb_cookie"
-  }
+
   # Configure Health Check for Target Group
   health_check {
-    path                = "/login"
+    path                = "/"
     protocol            = "HTTP"
-    matcher             = "200-299"
+    matcher             = "403"
     interval            = 15
     timeout             = 6
     healthy_threshold   = 3
@@ -242,4 +234,5 @@ output "alb_dns_name" {
   value       = aws_lb.jenkinsalb.dns_name
   description = "The domain name of the load balancer"
 }
+
 

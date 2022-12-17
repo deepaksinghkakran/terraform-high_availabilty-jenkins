@@ -11,9 +11,9 @@ data "aws_subnet_ids" "default" {
   vpc_id = data.aws_vpc.default.id
 }
 
-data "http" "myip" {
-  url = "http://ipv4.icanhazip.com"
-}
+# data "http" "myip" {
+#   url = "http://ipv4.icanhazip.com"
+# }
 
 
 # Configure Security Group
@@ -26,7 +26,7 @@ resource "aws_security_group" "Jenkins-SG" {
       from_port   = port.value
       to_port     = port.value
       protocol    = "TCP"
-      cidr_blocks = ["172.31.0.0/16", "${chomp(data.http.myip.body)}/32"]    # my wifi ip and vpc cidr, check by "curl wgetip.com" 
+      cidr_blocks = ["0.0.0.0/0"]    # my wifi ip and vpc cidr, check by "curl wgetip.com" 
     }
   }
   
@@ -47,7 +47,7 @@ resource "aws_security_group" "ingress-efs" {
     from_port   = 2049
     to_port     = 2049
     protocol    = "tcp"
-    cidr_blocks = ["172.31.0.0/16"]     # vpc cidr to make network storage available to vpc only 
+    cidr_blocks = ["0.0.0.0/0"]     # vpc cidr to make network storage available to vpc only 
   }
 
   egress {
@@ -68,7 +68,7 @@ resource "aws_security_group" "albSG" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["103.212.159.49/32"]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   # Allow all outbound requests
